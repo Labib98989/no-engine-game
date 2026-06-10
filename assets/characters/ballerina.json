@@ -1,0 +1,13 @@
+{
+  "name": "Ballerina",
+  "style": "ballet / contemporary — placeholder numbers, tuned in M1 playtests",
+  "health": 900,
+  "range":  { "A": 90,  "B": 260, "C": 150, "D": 140 },
+  "move":   { "A": 80,  "B": 135, "C": 170, "D": 0 },
+  "damage": { "A": 45,  "B": 135, "C": 125, "D": 55 },
+  "combo_scale_ground": [100, 80, 60, 40, 20],
+  "combo_scale_air":    [100, 90, 70, 50, 30],
+  "launch_height": 220,
+  "air_beats": 4,
+  "passive": "sustain"
+}

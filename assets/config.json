@@ -1,0 +1,18 @@
+{
+  "bpm": 120,
+  "perfect_ticks": 2,
+  "normal_ticks": 11,
+  "chip_damage": 4,
+  "perfect_damage_pct": 125,
+  "stick_landing_bonus_pct": 25,
+  "combo_cap": 5,
+  "round_seconds": 99,
+  "rounds_to_win": 2,
+  "intro_beats": 4,
+  "round_end_ticks": 180,
+  "stage_width": 1200,
+  "wall_margin": 60,
+  "min_gap": 70,
+  "start_offset": 250,
+  "crossup_gap": 90
+}

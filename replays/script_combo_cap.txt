@@ -1,0 +1,11 @@
+# Verifies the 5-hit combo cap (design.md §8.2): P0 walks in, wins the clash,
+# then lands unmatched hits; the combo must end by itself at 5 hits.
+A,Normal   A,Normal
+A,Normal   A,Normal
+A,Perfect  B,Normal
+A,Normal   B,Normal
+A,Normal   C,Normal
+A,Normal   D,Normal
+A,Normal   B,Normal
+A,Normal   C,Normal
+A,Normal   B,Normal

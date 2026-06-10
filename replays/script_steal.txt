@@ -1,0 +1,8 @@
+# Verifies the advantage steal (design.md §8.1): P1 matches P0's combo input
+# with a Perfect and takes the attacker role.
+A,Normal   A,Normal
+A,Normal   A,Normal
+A,Perfect  B,Normal
+B,Normal   C,Normal
+C,Normal   C,Perfect
+A,Normal   B,Normal

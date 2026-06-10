@@ -1,0 +1,11 @@
+# Example beat script (build-plan.md §3.2): one line per beat, starting at beat 1.
+# <P0 input,tier>  <P1 input,tier>   or  -  for silence.
+# Fighters start at gap 500: walk in first, then clash.
+A,Normal   A,Normal
+A,Normal   A,Normal
+A,Perfect  B,Normal
+A,Normal   C,Normal
+D,Normal   B,Perfect
+-          -
+B,Normal   B,Normal
+C,Perfect  C,Normal
