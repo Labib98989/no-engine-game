@@ -38,15 +38,15 @@ CharacterData default_character(CharId id) {
             c.combo_scale_air[i] = g[i];
         }
     } else {
-        // Vertical + air specialist: lives on B/C, fragile, best air game.
+        // Vertical + air specialist: A lunges in, B pokes-and-retreats; fragile, best air game.
         set_name(c, "BALLERINA");
         c.health = 900;
-        c.range[1] = Fixed::from_int(90);  // A short — gets bullied point-blank
-        c.range[2] = Fixed::from_int(260); // B extended — pokes across the stage
+        c.range[1] = Fixed::from_int(180); // A forward lunge — long reach on a hard commit
+        c.range[2] = Fixed::from_int(120); // B step-back poke — short, safe, retreats
         c.range[3] = Fixed::from_int(150);
         c.range[4] = Fixed::from_int(140);
-        c.move_dist[1] = Fixed::from_int(80);  // A advance shorter
-        c.move_dist[2] = Fixed::from_int(135); // B retreat longer — light footwork
+        c.move_dist[1] = Fixed::from_int(150); // A advance long — lunges in
+        c.move_dist[2] = Fixed::from_int(120); // B retreat — clean step back
         c.move_dist[3] = Fixed::from_int(170); // C hop height (high)
         c.move_dist[4] = Fixed::zero();
         c.damage_ground[1] = 45;

@@ -45,8 +45,44 @@ static void tier_color(SDL_Renderer* r, Tier t) {
     }
 }
 
-static void draw_fighter(SDL_Renderer* r, const SimulationState& s, int p) {
+// Which pose to show this tick, derived from sim state only (render-side; the
+// sim is untouched). Hit reaction wins, then the committed attack for the beat,
+// else idle. design.md's "freeze on the beat": the pose snaps when the input
+// commits and holds until the beat rolls over.
+static int pose_slot(const SimulationState& s, int p) {
     const Fighter& f = s.fighters[p];
+    if (s.match.phase == Phase::Intro) return POSE_DEFAULT;
+    const ResolutionResult& lr = s.last_result;
+    if (lr.resolved_tick != 0 && s.tick - lr.resolved_tick < 12) {
+        int32_t dmg = p == 0 ? lr.damage_p0 : lr.damage_p1;
+        if (dmg > 0) return POSE_HIT;
+    }
+    if (f.commit.locked && f.commit.input != Input::None)
+        return POSE_A + ((int)f.commit.input - 1); // Input::A==1 -> POSE_A ... D -> POSE_D
+    return POSE_IDLE;
+}
+
+static void draw_fighter(SDL_Renderer* r, const SimulationState& s, int p,
+                         const SpriteSheet sheets[2]) {
+    const Fighter& f = s.fighters[p];
+
+    // Sprite path: anchor the chosen pose at the fighter's feet (pos). Falls
+    // through to the rectangle path below when the sheet isn't loaded.
+    const SpriteSheet& sheet = sheets[p];
+    if (sheet.valid) {
+        float sx = wx(f.pos_x), sy = wy(f.pos_y);
+        if (f.pos_y > Fixed::zero()) { // floor shadow keeps the jump readable
+            SDL_SetRenderDrawColor(r, 0, 0, 0, 120);
+            fill(r, sx - 24.0f, FLOOR_Y - 4.0f, 48.0f, 4.0f);
+        }
+        draw_sprite(r, sheet, sheet.pose[pose_slot(s, p)], sx, sy, f.facing_right);
+        if (f.role == Role::Attacker) { // the role read the rect outline used to give
+            SDL_SetRenderDrawColor(r, 255, 215, 80, 255);
+            fill(r, sx - 16.0f, FLOOR_Y + 2.0f, 32.0f, 3.0f);
+        }
+        return;
+    }
+
     float w = p == 0 ? 58.0f : 48.0f;     // Breaker broad, Ballerina slender
     float h = p == 0 ? 150.0f : 170.0f;
     float x = wx(f.pos_x) - w / 2.0f;
@@ -285,7 +321,7 @@ static void draw_debug_overlay(SDL_Renderer* r, const SimulationState& s,
 }
 
 void draw_frame(SDL_Renderer* ren, const SimulationState& s, const CharacterData chars[2],
-                const ViewState& view) {
+                const SpriteSheet sheets[2], const ViewState& view) {
     SDL_SetRenderDrawBlendMode(ren, SDL_BLENDMODE_BLEND);
     SDL_SetRenderDrawColor(ren, 20, 16, 30, 255);
     SDL_RenderClear(ren);
@@ -301,8 +337,8 @@ void draw_frame(SDL_Renderer* ren, const SimulationState& s, const CharacterData
     SDL_SetRenderDrawColor(ren, 50, 46, 66, 255);
     fill(ren, STAGE_X + s.tune.stage_width / 2.0f - 1.0f, FLOOR_Y - 16.0f, 2.0f, 16.0f);
 
-    draw_fighter(ren, s, 0);
-    draw_fighter(ren, s, 1);
+    draw_fighter(ren, s, 0, sheets);
+    draw_fighter(ren, s, 1, sheets);
     draw_health(ren, s, chars);
     draw_beat_bar(ren, s);
     draw_state_banner(ren, s);

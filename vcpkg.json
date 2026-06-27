@@ -1,5 +1,9 @@
 {
   "name": "no-engine-game",
   "version-string": "0.1.0",
-  "dependencies": ["sdl3", "sdl3-image", "nlohmann-json"]
+  "dependencies": [
+    "sdl3",
+    { "name": "sdl3-image", "features": ["png"] },
+    "nlohmann-json"
+  ]
 }

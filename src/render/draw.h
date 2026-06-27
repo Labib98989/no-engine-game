@@ -3,6 +3,7 @@
 #pragma once
 #include <SDL3/SDL.h>
 #include "sim/types.h"
+#include "render/sprites.h"
 
 namespace neg {
 namespace render {
@@ -19,7 +20,7 @@ struct ViewState {
 };
 
 void draw_frame(SDL_Renderer* ren, const SimulationState& s, const CharacterData chars[2],
-                const ViewState& view);
+                const SpriteSheet sheets[2], const ViewState& view);
 
 } // namespace render
 } // namespace neg

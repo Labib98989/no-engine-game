@@ -14,6 +14,7 @@
 #include "platform/app.h"
 #include "platform/input.h"
 #include "render/draw.h"
+#include "render/sprites.h"
 #include "audio/audio.h"
 
 using namespace neg;
@@ -55,6 +56,16 @@ int main(int, char**) {
 
     SimulationState state{};
     sim::init_state(state, cfg.chars, cfg.tune, MATCH_SEED);
+
+    // Sprite sheets are render-side; an invalid sheet (no JSON block or missing
+    // PNG) makes draw_fighter fall back to the placeholder rectangle.
+    std::string base_dir = base ? base : "";
+    render::SpriteSheet sheets[2] = {
+        render::load_sprite_sheet(app.renderer, base_dir, "assets/characters/breaker.json"),
+        render::load_sprite_sheet(app.renderer, base_dir, "assets/characters/ballerina.json"),
+    };
+    SDL_Log("sprites: breaker=%s ballerina=%s", sheets[0].valid ? "loaded" : "rect",
+            sheets[1].valid ? "loaded" : "rect");
 
     audio::Audio* snd = audio::init();
 
@@ -164,10 +175,12 @@ int main(int, char**) {
         view.replay_status = rec.status;
         view.diverge_tick = rec.diverge_tick;
         view.fps = fps;
-        render::draw_frame(app.renderer, state, cfg.chars, view);
+        render::draw_frame(app.renderer, state, cfg.chars, sheets, view);
         SDL_RenderPresent(app.renderer);
     }
 
+    render::unload_sprite_sheet(sheets[0]);
+    render::unload_sprite_sheet(sheets[1]);
     audio::shutdown(snd);
     return 0;
 }

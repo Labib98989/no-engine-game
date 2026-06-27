@@ -9,5 +9,18 @@
   "combo_scale_air":    [100, 80, 60, 40, 20],
   "launch_height": 140,
   "air_beats": 3,
-  "passive": "stick_the_landing"
+  "passive": "stick_the_landing",
+
+  "sprite": {
+    "sheet": "characters/breaker.png",
+    "frames": 7,
+    "cell_w": 256,
+    "cell_h": 256,
+    "columns": 8,
+    "scale": 1.5,
+    "alpha_threshold": 16,
+    "source_faces_left": false,
+    "poses": { "default": 0, "idle": 1, "A": 2, "B": 3, "C": 4, "D": 5, "hit": 6 },
+    "overrides": {}
+  }
 }

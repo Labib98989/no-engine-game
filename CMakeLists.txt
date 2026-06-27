@@ -55,6 +55,7 @@ add_executable(neg WIN32
     src/platform/input.cpp
     src/render/font5x7.cpp
     src/render/draw.cpp
+    src/render/sprites.cpp
     src/data/loader.cpp
     src/audio/audio.cpp
 )

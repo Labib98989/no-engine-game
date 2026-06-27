@@ -93,9 +93,15 @@ void play_hit(void) {
 {
   "name": "no-engine-game",
   "version-string": "0.1.0",
-  "dependencies": ["sdl3", "sdl3-image", "nlohmann-json"]
+  "dependencies": [
+    "sdl3",
+    { "name": "sdl3-image", "features": ["png"] },
+    "nlohmann-json"
+  ]
 }
 ```
+
+> **Gotcha (verified 2026-06-20):** vcpkg's `sdl3-image` enables **no image formats by default** — you must request the `png` feature explicitly, or `IMG_Load` fails at runtime with *"Unsupported image format"* (the build still succeeds). The `png` feature pulls in libpng + zlib, whose DLLs are staged automatically by `$<TARGET_RUNTIME_DLLS:neg>`.
 
 **`CMakeLists.txt` skeleton:**
 

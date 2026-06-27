@@ -2,12 +2,25 @@
   "name": "Ballerina",
   "style": "ballet / contemporary — placeholder numbers, tuned in M1 playtests",
   "health": 900,
-  "range":  { "A": 90,  "B": 260, "C": 150, "D": 140 },
-  "move":   { "A": 80,  "B": 135, "C": 170, "D": 0 },
+  "range":  { "A": 180, "B": 120, "C": 150, "D": 140 },
+  "move":   { "A": 150, "B": 120, "C": 170, "D": 0 },
   "damage": { "A": 45,  "B": 135, "C": 125, "D": 55 },
   "combo_scale_ground": [100, 80, 60, 40, 20],
   "combo_scale_air":    [100, 90, 70, 50, 30],
   "launch_height": 220,
   "air_beats": 4,
-  "passive": "sustain"
+  "passive": "sustain",
+
+  "sprite": {
+    "sheet": "characters/ballerina.png",
+    "frames": 7,
+    "cell_w": 256,
+    "cell_h": 256,
+    "columns": 8,
+    "scale": 1.5,
+    "alpha_threshold": 16,
+    "source_faces_left": false,
+    "poses": { "default": 0, "idle": 1, "A": 2, "B": 3, "C": 4, "D": 5, "hit": 6 },
+    "overrides": { "2": { "anchor_y": 155 } }
+  }
 }
