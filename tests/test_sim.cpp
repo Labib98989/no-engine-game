@@ -149,6 +149,15 @@ TEST_CASE("winning rounds_to_win rounds ends the match") {
     CHECK(r.s.match.match_winner == 0);
 }
 
+TEST_CASE("character-select init supports mirror matches") {
+    Rig r;
+    sim::init_state(r.s, r.chars, r.tune, 7, CharId::Ballerina, CharId::Ballerina, true);
+    CHECK(r.s.fighters[0].character == CharId::Ballerina);
+    CHECK(r.s.fighters[1].character == CharId::Ballerina);
+    CHECK(r.s.fighters[0].health == r.chars[1].health); // both read chars[Ballerina]
+    CHECK(r.s.fighters[1].health == r.chars[1].health);
+}
+
 TEST_CASE("fighters slide to their targets exactly by the next resolution") {
     Rig r;
     r.s.fighters[0].pos_x = Fixed::from_int(400);

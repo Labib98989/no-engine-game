@@ -4,6 +4,10 @@
 //
 //   neg_headless replays/script.txt [--checksums] [--verify] [--beats N]
 //   neg_headless --ticklog session_ticks.txt [--checksums]
+//   neg_headless --bot0 hard --bot1 easy --beats 300 [--verify]
+//
+// --bot0/--bot1 <easy|normal|hard> hand a seat to the CPU opponent (sim/ai);
+// that seat ignores the schedule. Bot-vs-bot needs no script at all.
 //
 // Beat-script format (one line per beat, starting at beat 1):
 //   <P0> <P1>     where each is  Input,Tier  or  -
@@ -20,6 +24,7 @@
 
 #include "sim/simulation.h"
 #include "sim/chardata.h"
+#include "sim/ai.h"
 
 using namespace neg;
 
@@ -97,12 +102,18 @@ static int64_t tier_offset(Tier t) {
 
 static int run(const std::vector<ScheduledPress>& presses, uint64_t total_ticks, uint64_t seed,
                bool skip_intro, bool print_checksums, bool quiet, uint64_t* out_checksum,
-               std::vector<uint64_t>* per_tick) {
+               std::vector<uint64_t>* per_tick, const AiConfig* bots[2]) {
     CharacterData chars[2] = {default_character(CharId::Breaker),
                               default_character(CharId::Ballerina)};
     Tuning tune = default_tuning();
     SimulationState s{};
     sim::init_state(s, chars, tune, seed, skip_intro);
+
+    // Fresh bot states per run: --verify re-enters here, and identical seeds +
+    // deterministic decisions must reproduce identical per-tick checksums.
+    AiState bot_state[2];
+    for (int p = 0; p < 2; ++p)
+        if (bots[p]) ai_init(bot_state[p], seed, p);
 
     std::map<uint64_t, FrameInput> schedule;
     for (const ScheduledPress& p : presses)
@@ -115,6 +126,11 @@ static int run(const std::vector<ScheduledPress>& presses, uint64_t total_ticks,
         FrameInput in{};
         auto it = schedule.find(t);
         if (it != schedule.end()) in = it->second;
+        for (int p = 0; p < 2; ++p) {
+            if (!bots[p]) continue;
+            AiView av = ai_make_view(s, p);
+            in.pressed[p] = ai_update(bot_state[p], av, *bots[p], chars);
+        }
         sim::tick(s, in, chars);
 
         uint64_t cs = s.checksum();
@@ -142,10 +158,19 @@ static int run(const std::vector<ScheduledPress>& presses, uint64_t total_ticks,
     return 0;
 }
 
+static bool parse_preset(const std::string& s, AiPreset& out) {
+    if (s == "easy") { out = AiPreset::Easy; return true; }
+    if (s == "normal") { out = AiPreset::Normal; return true; }
+    if (s == "hard") { out = AiPreset::Hard; return true; }
+    return false;
+}
+
 int main(int argc, char** argv) {
     std::string script, ticklog;
     bool checksums = false, verify = false;
     uint64_t beats_limit = 0;
+    AiConfig bot_cfg[2];
+    const AiConfig* bots[2] = {nullptr, nullptr};
 
     for (int i = 1; i < argc; ++i) {
         std::string a = argv[i];
@@ -153,16 +178,28 @@ int main(int argc, char** argv) {
         else if (a == "--verify") verify = true;
         else if (a == "--ticklog" && i + 1 < argc) ticklog = argv[++i];
         else if (a == "--beats" && i + 1 < argc) beats_limit = (uint64_t)atoll(argv[++i]);
+        else if ((a == "--bot0" || a == "--bot1") && i + 1 < argc) {
+            AiPreset p;
+            if (!parse_preset(argv[++i], p)) {
+                fprintf(stderr, "bad preset for %s (easy|normal|hard)\n", a.c_str());
+                return 1;
+            }
+            int seat = a == "--bot0" ? 0 : 1;
+            bot_cfg[seat] = default_ai_config(p);
+            bots[seat] = &bot_cfg[seat];
+        }
         else if (a[0] != '-') script = a;
         else {
             fprintf(stderr, "unknown arg: %s\n", a.c_str());
             return 1;
         }
     }
-    if (script.empty() && ticklog.empty()) {
+    bool any_bot = bots[0] || bots[1];
+    if (script.empty() && ticklog.empty() && !any_bot) {
         fprintf(stderr,
                 "usage: neg_headless <script.txt> [--checksums] [--verify] [--beats N]\n"
-                "       neg_headless --ticklog <session_ticks.txt> [--checksums]\n");
+                "       neg_headless --ticklog <session_ticks.txt> [--checksums]\n"
+                "       neg_headless --bot0 <easy|normal|hard> --bot1 <...> --beats N [--verify]\n");
         return 1;
     }
 
@@ -173,7 +210,11 @@ int main(int argc, char** argv) {
     Tuning tune = default_tuning();
     uint16_t tpb = (uint16_t)(3600 / tune.bpm);
 
-    if (!ticklog.empty()) {
+    if (script.empty() && ticklog.empty()) {
+        // Pure bot-vs-bot (or bot-vs-silence): no schedule, just a tick budget.
+        if (beats_limit == 0) beats_limit = 120;
+        total_ticks = (beats_limit + 1) * tpb;
+    } else if (!ticklog.empty()) {
         // Per-tick input log written by the game's F9 recorder.
         std::ifstream f(ticklog);
         if (!f.is_open()) {
@@ -229,14 +270,14 @@ int main(int argc, char** argv) {
     }
 
     uint64_t cs1 = 0;
-    run(presses, total_ticks, seed, skip_intro, checksums, false, &cs1, nullptr);
+    run(presses, total_ticks, seed, skip_intro, checksums, false, &cs1, nullptr, bots);
     printf("final checksum %016llx\n", (unsigned long long)cs1);
 
     if (verify) {
         // Determinism harness: same inputs twice, per-tick checksums must match.
         std::vector<uint64_t> a, b;
-        run(presses, total_ticks, seed, skip_intro, false, true, nullptr, &a);
-        run(presses, total_ticks, seed, skip_intro, false, true, nullptr, &b);
+        run(presses, total_ticks, seed, skip_intro, false, true, nullptr, &a, bots);
+        run(presses, total_ticks, seed, skip_intro, false, true, nullptr, &b, bots);
         for (size_t i = 0; i < a.size(); ++i) {
             if (a[i] != b[i]) {
                 printf("VERIFY FAIL: divergence at tick %llu\n", (unsigned long long)(i + 1));

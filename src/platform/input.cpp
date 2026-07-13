@@ -34,19 +34,23 @@ void poll_events(FrameInput& input, UiCommands& ui) {
             if (ev.key.repeat) break;
             int player = 0;
             int bit = button_bit(ev.key.scancode, player);
-            if (bit >= 0) {
+            if (bit >= 0)
                 input.pressed[player] |= (uint8_t)(1u << bit);
-                break;
-            }
+            // Fall through to menu nav: the same keys navigate shell screens.
             switch (ev.key.scancode) {
-            case SDL_SCANCODE_ESCAPE: ui.quit = true; break;
+            case SDL_SCANCODE_ESCAPE: ui.back = true; break;
             case SDL_SCANCODE_F1: ui.toggle_overlay = true; break;
             case SDL_SCANCODE_F5: ui.toggle_pause = true; break;
             case SDL_SCANCODE_F6: ui.step = true; break;
             case SDL_SCANCODE_F7: ui.resume = true; break;
+            case SDL_SCANCODE_F8: ui.cycle_cpu = true; break;
             case SDL_SCANCODE_F9: ui.toggle_record = true; break;
             case SDL_SCANCODE_F10: ui.replay = true; break;
-            case SDL_SCANCODE_RETURN: ui.restart = true; break;
+            case SDL_SCANCODE_RETURN: ui.confirm = true; break;
+            case SDL_SCANCODE_W: case SDL_SCANCODE_UP: ui.nav_up = true; break;
+            case SDL_SCANCODE_S: case SDL_SCANCODE_DOWN: ui.nav_down = true; break;
+            case SDL_SCANCODE_A: case SDL_SCANCODE_LEFT: ui.nav_left = true; break;
+            case SDL_SCANCODE_D: case SDL_SCANCODE_RIGHT: ui.nav_right = true; break;
             default: break;
             }
             break;

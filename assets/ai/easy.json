@@ -1,0 +1,10 @@
+{
+  "name": "EASY",
+  "solver_iters": 128,
+  "policy_noise_pct": 55,
+  "drop_pct": 12,
+  "aim_min_ticks": 2,
+  "aim_max_ticks": 13,
+  "v_advantage": 120,
+  "whiff_approach_bonus": 6
+}

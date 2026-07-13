@@ -59,7 +59,17 @@ void resolve_clash(SimulationState& s, const CharacterData chars[2]) {
 
     // Range gatekeeps the RPS (design.md §7): only landed attacks compare.
     // A Miss-tier press blew the rhythm — it cannot land.
-    Fixed gap = fighter_gap(s);
+    // The gate reads the gap between the window-open anchors, not the live
+    // positions: fighters may already be sliding this beat (movement starts
+    // when the pose commits), so anchoring keeps the clash exactly where it
+    // stood when the window opened. A direct caller with no window captures
+    // the anchors from the current positions here.
+    if (!s.duel.anchor_ready) {
+        s.duel.anchor_x[0] = f0.pos_x;
+        s.duel.anchor_x[1] = f1.pos_x;
+        s.duel.anchor_ready = true;
+    }
+    Fixed gap = Fixed::abs(s.duel.anchor_x[0] - s.duel.anchor_x[1]);
     bool ok0 = c0.input != Input::None && c0.tier != Tier::Miss;
     bool ok1 = c1.input != Input::None && c1.tier != Tier::Miss;
     bool land0 = ok0 && cd0.range[(int)c0.input] >= gap;

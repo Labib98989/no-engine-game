@@ -21,7 +21,14 @@ App::App(const char* title, int w, int h) {
         return;
     }
     SDL_SetRenderVSync(renderer, 1);
+    // Fixed logical canvas: fullscreen and window resizes letterbox-scale the
+    // same 1280x720 the draw code targets.
+    SDL_SetRenderLogicalPresentation(renderer, w, h, SDL_LOGICAL_PRESENTATION_LETTERBOX);
     ok = true;
+}
+
+void set_fullscreen(App& app, bool on) {
+    if (app.window) SDL_SetWindowFullscreen(app.window, on);
 }
 
 App::~App() {

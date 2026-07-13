@@ -144,6 +144,11 @@ Each gets its own verify gate (unit tests + headless script first, then the wind
 6. **Aseprite → atlas pipeline** (research.md §5; install Aseprite now) with placeholder pixel art; ticks-not-ms timings.
 7. **Second character + `CharacterData` tuning** — Breaker/Ballerina numbers dialed via the beat log (technical.md §3.7).
 
+### CPU opponent — gated slice (design.md §17 / technical.md §12; shipped post-M0)
+Built in six sub-slices, each leaving the repo green: A1 walking skeleton (random-legal bot through the full F8/HUD/replay wiring) → A2 `AiView` no-cheat contract + core tests → A3 fictitious-play solver + payoff matrices → A4 error model + `assets/ai/*.json` presets → A5 headless `--bot0/--bot1` → A6 docs.
+- **Gate:** `test_ai.cpp` green (legality, determinism, replay/checksum invariance, no-cheat property, solver sanity, tier rates); CTest `headless_bot_vs_bot --verify` prints `VERIFY OK`; manual F8 pass — presets feel distinct, HUD tag updates, F9→F10 on a vs-CPU session reports `REPLAY: CHECKSUMS OK`.
+- The M2 **training-mode dummy** (record/playback) remains a separate deliverable; it shares the FrameInput seam, not this brain.
+
 ---
 
 ## 5. Verification harness reference

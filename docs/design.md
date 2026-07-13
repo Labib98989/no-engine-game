@@ -360,7 +360,9 @@ Fixed-timestep 60Hz with accumulator pattern. Render reads latest sim state dire
 - Character differentiation passes (dance styles diverge mechanically).
 - Song-as-system: verse / chorus / drop rule modulation.
 - Audio polish: hit SFX pool, voice clips, BGM sync.
-- AI training-mode dummy.
+- AI training-mode dummy (records human inputs, plays them back — distinct from the CPU opponent below).
+- CPU opponent tuning pass (§17 — first playable version shipped post-M0 behind F8).
+- Front-end shell polish pass (first version shipped post-M0: title + attract-mode CPU demo, match setup with per-seat human/CPU control, characters and best-of-N, how-to-play pages, options persisted to `settings.json`, pause and results menus).
 
 ### M3 — Optional Rollback Netcode
 
@@ -374,7 +376,47 @@ To be decided in future sessions:
 2. **Match economy.** Health per round. Best-of-3 vs single round. Round timer length. KO / time-over / draw rules.
 3. **Visual presentation.** UI for state (Neutral / Attacker / Defender), beat indicator, damage/health bars, combo counter, audiovisual feedback for clash outcomes.
 4. **Audio design.** Music tracks per stage vs per character. SFX pool sizing. Mixing rules.
-5. **Onboarding / tutorial.** First-time player flow. Practice mode design.
+5. **Onboarding / tutorial.** First-time player flow. Practice mode design. *(A first How-to-Play screen shipped with the shell; an interactive tutorial and practice mode remain open.)*
 6. **Meter / super system.** Optional power-spike layer. Currently no meter — should there be?
 7. **Airborne edge cases.** Defender escape behavior specifics. Gravity transition handling. Vertical state mismatches.
 8. **Character numeric values.** Section 11 specifies *direction* of each kit delta (extended / shorter / boosted / etc.). Concrete numbers (tile ranges, HP totals, damage values, beat counts) get tuned during M1 playtesting.
+
+## 17. CPU Opponent
+
+The computer plays the same yomi game on the same metronome. F8 cycles P2's seat: Human → CPU Easy → CPU Normal → CPU Hard.
+
+### 17.1 Concept — a perfect-play anchor, degraded by human-like error
+
+Because every beat is a simultaneous-reveal commitment, "perfect play" here is not a single correct move — it is the **game-theoretic optimal mixed strategy** for the current beat: a probability distribution over A/B/C/D computed from the real payoff matrix (range gates, damage table, the value of entering Advantage). A CPU sampling that distribution is *unexploitable*: no habit the player develops beats it in the long run. That anchor is the top of the difficulty scale, and every lower difficulty is the same brain with error injected — never a different, dumber rule set.
+
+Three error dials, one per axis of human fallibility:
+
+| dial | what it degrades | reads as |
+|---|---|---|
+| policy noise | *what* it picks (swaps the optimal sample for a habit pick) | predictable tendencies you can read |
+| timing spread | *when* it presses (offset from the beat instant) | sloppy hands — fewer Perfects, some Misses |
+| drop rate | *whether* it shows up at all | losing the rhythm entirely |
+
+Difficulty never grants the CPU anything a human lacks: no reading your inputs, no temporal advantage (§11 — the shared metronome stays load-bearing), no extra damage or health.
+
+### 17.2 The no-cheat rule (a design guarantee)
+
+The CPU sees exactly what a human opponent sees: positions, health, the shared beat, and how *past* beats resolved. Your current-beat commit is hidden from it until resolution, same as against a person. This is enforced structurally (the bot reads a restricted view of the simulation that simply does not contain your commit) and by a regression test: two game states differing only in your hidden commit must produce byte-identical CPU behavior.
+
+One deliberate subtlety: a fighter starts sliding the instant their pose commits (§10), so a human *can* sometimes see an early commit begin to move and react late in the window. The CPU deliberately does not — at machine reaction speed that read would be degenerate (it would always counter you), so the bot commits blind like the design intends everyone to.
+
+### 17.3 Character flavor
+
+The optimal mixture already differs per character for free — it is computed from the real kit numbers, so CPU Breaker and CPU Ballerina play differently at the anchor. On top of that, the *mistakes* lean into character: when policy noise fires, Breaker errs toward his safe A/D pair, Ballerina toward her committed B/C pair. Low-difficulty CPUs therefore read as exaggerated versions of their character, not as random-input machines.
+
+### 17.4 What a difficulty step feels like
+
+- **Easy** — strong habits (over half its picks are flavored, not optimal), never aims the instant, drops ~1 beat in 8. Combos against it run long; its steals are rare luck.
+- **Normal** — mostly optimal picks, moderate hands (~30% Perfect). A fair sparring partner.
+- **Hard** — near-anchor picks, ~60% Perfect. Punishes range errors in Neutral, and defends combos at the full escape math of §8.4: with match-guessing near optimal and Perfects common, expect steals, not just breaks.
+
+The presets are data (`assets/ai/*.json`), same pipeline as character tuning; the dials are continuous, so intermediate or custom difficulties are a JSON edit, not code.
+
+### 17.5 Deliberately deferred (v1)
+
+Priced into the design but not the first implementation: opponent modeling (reading *your* habits — the future top-end dial above Hard), steal-risk pricing in the attacker's mixture, Perfect-tier interactions inside the payoff matrix (Sustain, the ×1.25), and positional value beyond a simple "approach when outranged" nudge. The training-mode dummy (M2) is a separate, simpler deliverable: it records and replays inputs, it does not think.

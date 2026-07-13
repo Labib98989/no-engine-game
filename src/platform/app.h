@@ -16,5 +16,9 @@ struct App {
     App& operator=(const App&) = delete;
 };
 
+// Borderless-fullscreen toggle. The renderer keeps a 1280x720 logical
+// presentation (letterboxed), so all draw code stays in fixed coordinates.
+void set_fullscreen(App& app, bool on);
+
 } // namespace platform
 } // namespace neg

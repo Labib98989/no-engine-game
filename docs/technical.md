@@ -388,8 +388,11 @@ src/
     combo.{h,cpp}        resolve_combo (continue/break/steal/cap, cross-up, scaling, passives)
     airborne.{h,cpp}     air sub-state entry/exit
     simulation.{h,cpp}   SimulationState + sim::tick pipeline + checksum
-  data/           ← JSON -> CharacterData / config POD loaders
-  platform/       ← SDL3 init, event pump -> FrameInput, window
+    ai.{h,cpp}           CPU opponent: AiView no-cheat window, fictitious-play maximin, error model (§12)
+  data/           ← JSON -> CharacterData / config POD loaders + persisted Settings
+  shell/          ← meta-game state machine (title/setup/how-to/options/pause/results);
+                    pure front-end — emits Actions, never touches the sim
+  platform/       ← SDL3 init, event pump -> FrameInput + menu nav, window/fullscreen
   render/         ← reads SimulationState; never mutates. rectangles (M0) -> sprites (M1)
   audio/          ← miniaudio glue; reads beat_index, fires metronome/click/music (one-way, design §12)
   analyzer/       ← overlay, inspector panel, beat log, scrubber (reads state + checksum log)
@@ -417,6 +420,7 @@ src/
 | §13 Technical architecture (summary) | this whole doc |
 | §15 Milestones | build-plan.md §4 |
 | §16 Open questions | typed placeholders; not resolved here |
+| §17 CPU opponent | §12 `sim/ai`, `assets/ai/*.json`, F8 in `platform/input` + `main.cpp` |
 
 ---
 
@@ -426,3 +430,61 @@ src/
 - **Cosmetic impact freeze** — whether to add a render/audio-only "hit pop" that must not stall the shared beat. Pure presentation; decide in M1.
 - **Airborne vertical mismatches** (design.md §9.4) — exact behavior when both inputs disagree on grounding. Placeholder until M1 playtest.
 - All of design.md §16 (song-as-system, match economy, meter) — parked.
+
+---
+
+## 12. CPU opponent (`sim/ai`) — design.md §17
+
+### 12.1 Module boundary
+
+`ai.{h,cpp}` compiles into `neg_sim` (fixed-point/integer only, no SDL/float — the build enforces it like every sim module) but lives **outside** `SimulationState`:
+
+- `AiState` owns its **own PCG32**, seeded from the match seed with a per-player initseq. It never touches `s.rng`, so sim checksums are identical whether P2 is a human or the bot — human-vs-human and vs-CPU replays are the same artifact.
+- Output is ordinary `FrameInput` bits for one seat, produced *before* `sim::tick` (main.cpp injection seam, skipped while a replay is driving inputs). The F9 recorder therefore captures bot presses like a human's, and a ticklog replay needs no bot at all.
+- Front-end wiring: F8 (`UiCommands.cycle_cpu`) cycles P2 Human → Easy → Normal → Hard; each cycle and every `init_state` re-runs `ai_init(cpu, MATCH_SEED, 1)` so a session reproduces from (seed, ticklog). HUD shows `CPU EASY/NORMAL/HARD` in the status cluster.
+
+### 12.2 `AiView` — the no-cheat observation contract
+
+The bot never reads `SimulationState` directly; `ai_make_view(s, player)` copies the legal subset: tick/beat clock, `Phase`/`Macro`/roles/combo counters, airborne flags, healths, **the anchor gap** (what `resolve_clash`'s range gate actually reads — live mid-slide positions are the wrong number), the bot's **own** commit, both `CharId`s, `Tuning`, and `last_result` (the *previous* beat — public once resolved). The opponent's current-window commit — visible in `fighters[p].commit` from the instant they press — is deliberately absent. Regression test: two states differing only in that field produce byte-identical views and emissions across the whole window.
+
+`AiState` also keeps a 32-entry ring of resolved history (`AiHistoryEntry`, recorded off `last_result` once per resolution). The v1 policy never reads it; it exists so the future adaptive knob (design.md §17.5) is a pure addition.
+
+### 12.3 Decision and emission timing
+
+One decision per window: when `beat_index` changes (the boundary tick — its state already contains that tick's resolution, so the decision sees the post-resolution macro state and fresh anchors), the bot picks an input **and** a target press tick, then emits only on that tick. Every decision draws the same fixed rng sequence (drop, noise, mixture, flavor, magnitude, sign) whatever branch it takes, keeping the stream auditable. Outside `Fighting` the bot is silent. If Fighting resumes inside a window with no emittable tick left (round transitions can land a tick shy of a boundary), the bot deliberately waits for the next window rather than pressing into a guaranteed Miss.
+
+### 12.4 Payoff matrices — reuse of the resolver's own tables
+
+Entries are int32 "expected damage delta to the bot", both sides assumed Normal tier (timing lives in the error model, never the matrix). Built per decision from `rps_beats` / `input_beats()` / `base_damage()` (clash.h — the same single source of truth the resolver uses) and the live `CharacterData`:
+
+- **Neutral 4×4** — range-gate each side by `range[input] >= anchor_gap`, exactly the `resolve_clash` gate. Both whiff → 0 (+`whiff_approach_bonus` on row A when fully outranged, so the gap closes); one lands → ±(`base_damage` + `v_advantage`); both land, different → the RPS table picks the sign; same input → 0 (Normal-Normal re-clash). Silence is not a row (weakly dominated; it enters only via the drop dial).
+- **Advantage (attacker rows × defender-guess columns)** — match → 0 (break); mismatch → `base_damage × scale[min(combo_count,4)] / 100` with the attacker's own air/ground table, plus Stick the Landing on a cap-final D (guaranteed by `end_combo`; mid-combo D bonuses are contingent and unpriced).
+- **Defender** — the same matrix; the bot samples the minimizing **column** mixture. It always aims the instant: a match breaks at any tier and match+Perfect steals (`resolve_combo`), so Perfect-seeking has zero downside and the timing spread alone sets the steal rate (Easy ≈ 2%/beat, Hard ≈ 15%/beat at the 25% blind-match base of design.md §8.4).
+
+### 12.5 Solver — integer fictitious play
+
+`ai_solve_zero_sum` runs `solver_iters` alternating best responses against empirical counts (first row response vs uniform; ties to the lowest index; int64 accumulators). Both mixtures come back as counts summing to `iters`; sampling walks the counts with one `rng.next_below(iters)` draw — unbiased, deterministic, no division. Exploitability decays ~1/√N: at 256 iterations on a 4×4 it sits well below the error model's noise floor (test-bounded at ≤15 damage-units on ±100-scale games).
+
+### 12.6 Knobs, presets, data
+
+`AiConfig` (POD) ↔ `assets/ai/{easy,normal,hard}.json`, names 1:1, with `default_ai_config(AiPreset)` as the in-code mirror (chardata pattern; `data/loader.cpp` overlays JSON with `j.value` fallbacks into `GameConfig.ai[3]`):
+
+| knob | Easy | Normal | Hard | meaning |
+|---|---|---|---|---|
+| `solver_iters` | 128 | 256 | 512 | fictitious-play iterations |
+| `policy_noise_pct` | 55 | 25 | 8 | swap maximin sample for a character-flavored pick (Breaker A/D-leaning, Ballerina B/C) |
+| `drop_pct` | 12 | 3 | 0 | skip the beat |
+| `aim_min/max_ticks` | 2/13 | 0/9 | 0/4 | press offset from the instant, uniform, random sign |
+| → tiers | ~8% P / 17% Miss | 30% P | 60% P, no Miss | via the §1.3 bands |
+| `v_advantage` | 120 | 120 | 120 | damage-equivalent value of entering Advantage |
+| `whiff_approach_bonus` | 6 | 6 | 6 | Neutral approach shaping when outranged |
+
+### 12.7 Verification
+
+- `tests/test_ai.cpp`: emission legality (≤1 press/window, valid bits, silent outside Fighting), determinism (same seed → identical stream; **replay-invariance**: feeding the bot's recorded bits through a bot-free run reproduces every checksum), the no-cheat property test, solver sanity (RPS ≈ uniform, dominant row, exploitability bound), preset tier-rate measurement, outranged-approach and defender-aim behavior checks.
+- `neg_headless --bot0 <preset> --bot1 <preset> --beats N --verify`: bot-vs-bot with per-tick checksum double-run; wired into CTest as `headless_bot_vs_bot`.
+- Manual: F8 through the presets; F9 a vs-CPU session → F10 `REPLAY: CHECKSUMS OK` → `neg_headless --ticklog` cross-check.
+
+### 12.8 Deferred (documented, not implemented)
+
+Opponent modeling from the history ring (capped exploitation as a >Hard dial); steal-risk pricing on the attacker diagonal; Perfect-tier matrix terms (Sustain, ×1.25, tie-breaks); an opponent silence column weighted by observed drop rate; continuation values (launch changing future scaling tables, air-beat budget); positional value beyond the approach nudge (walls, retreat at a health lead).

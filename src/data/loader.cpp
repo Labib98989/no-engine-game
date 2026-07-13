@@ -59,6 +59,25 @@ static bool load_character(const std::string& path, CharacterData& c) {
     return true;
 }
 
+static bool load_ai(const std::string& path, AiConfig& c) {
+    json j;
+    if (!read_json(path, j)) return false;
+    std::string name = j.value("name", std::string());
+    if (!name.empty()) {
+        size_t i = 0;
+        for (; i < name.size() && i < 15; ++i) c.name[i] = name[i];
+        c.name[i] = 0;
+    }
+    c.solver_iters = (uint16_t)j.value("solver_iters", (int)c.solver_iters);
+    c.policy_noise_pct = (uint8_t)j.value("policy_noise_pct", (int)c.policy_noise_pct);
+    c.drop_pct = (uint8_t)j.value("drop_pct", (int)c.drop_pct);
+    c.aim_min_ticks = (uint8_t)j.value("aim_min_ticks", (int)c.aim_min_ticks);
+    c.aim_max_ticks = (uint8_t)j.value("aim_max_ticks", (int)c.aim_max_ticks);
+    c.v_advantage = j.value("v_advantage", c.v_advantage);
+    c.whiff_approach_bonus = j.value("whiff_approach_bonus", c.whiff_approach_bonus);
+    return true;
+}
+
 static bool load_tuning(const std::string& path, Tuning& t) {
     json j;
     if (!read_json(path, j)) return false;
@@ -98,6 +117,14 @@ GameConfig load_config(const std::string& base_dir) {
     cfg.notes += load_character(base_dir + "assets/characters/ballerina.json", cfg.chars[1])
                      ? "ballerina.json"
                      : "ballerina:builtin";
+
+    static const char* ai_files[3] = {"easy", "normal", "hard"};
+    for (int i = 0; i < 3; ++i) {
+        cfg.ai[i] = default_ai_config((AiPreset)i);
+        cfg.notes += load_ai(base_dir + "assets/ai/" + ai_files[i] + ".json", cfg.ai[i])
+                         ? " ai:" + std::string(ai_files[i]) + ".json"
+                         : " ai:" + std::string(ai_files[i]) + ":builtin";
+    }
     return cfg;
 }
 

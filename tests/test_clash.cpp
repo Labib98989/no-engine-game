@@ -161,9 +161,9 @@ TEST_CASE("Sustain: Ballerina wins the Perfect-Perfect same-input tie") {
 
 TEST_CASE("range gates the RPS: the in-range player simply lands") {
     Fixture f;
-    f.place(400, 640); // gap 240: only Ballerina B (260) reaches
-    f.commit(0, Input::A, Tier::Perfect); // would beat B if it landed
-    f.commit(1, Input::B, Tier::Normal);
+    f.place(400, 530); // gap 130: Ballerina D (140) reaches, Breaker C (120) doesn't
+    f.commit(0, Input::C, Tier::Perfect); // would beat D if it landed
+    f.commit(1, Input::D, Tier::Normal);
     resolve_clash(f.s, f.chars);
     CHECK(f.s.last_result.outcome == Outcome::OneLands);
     CHECK(f.s.last_result.winner == 1);
@@ -173,10 +173,10 @@ TEST_CASE("neutral movement: A closes, B retreats, walls clamp, no tunneling") {
     Fixture f;
     f.place(400, 500);
     f.commit(0, Input::A, Tier::Normal); // toward opponent +115
-    f.commit(1, Input::B, Tier::Normal); // away +135
+    f.commit(1, Input::B, Tier::Normal); // away +120
     resolve_clash(f.s, f.chars);
     CHECK(f.s.fighters[0].move_target_x == Fixed::from_int(515));
-    CHECK(f.s.fighters[1].move_target_x == Fixed::from_int(635));
+    CHECK(f.s.fighters[1].move_target_x == Fixed::from_int(620));
 
     Fixture g; // both advance into each other: min_gap preserved
     g.place(500, 580);

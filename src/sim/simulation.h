@@ -10,6 +10,11 @@ namespace sim {
 void init_state(SimulationState& s, const CharacterData chars[2], const Tuning& tune,
                 uint64_t seed, bool skip_intro = false);
 
+// Fresh match with chosen characters (mirror matches allowed — chars[] is
+// indexed by CharId, so both fighters may read the same entry).
+void init_state(SimulationState& s, const CharacterData chars[2], const Tuning& tune,
+                uint64_t seed, CharId p0, CharId p1, bool skip_intro = false);
+
 void tick(SimulationState& s, const FrameInput& in, const CharacterData chars[2]);
 
 } // namespace sim

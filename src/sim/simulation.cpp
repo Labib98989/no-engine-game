@@ -51,6 +51,7 @@ uint64_t SimulationState::checksum() const {
     h.u8((uint8_t)duel.macro); h.u8(duel.attacker); h.u8(duel.defender);
     h.u8(duel.combo_count); h.u8(duel.air_beats_elapsed);
     h.u8((uint8_t)duel.last_hit_input); h.i32(duel.last_hit_damage);
+    h.fx(duel.anchor_x[0]); h.fx(duel.anchor_x[1]); h.b(duel.anchor_ready);
     h.u8((uint8_t)last_result.outcome); h.u8((uint8_t)last_result.winner);
     h.i32(last_result.damage_p0); h.i32(last_result.damage_p1);
     h.u8((uint8_t)last_result.p0_input); h.u8((uint8_t)last_result.p1_input);
@@ -95,7 +96,7 @@ static void reset_round(SimulationState& s, const CharacterData chars[2], bool s
 }
 
 void init_state(SimulationState& s, const CharacterData chars[2], const Tuning& tune,
-                uint64_t seed, bool skip_intro) {
+                uint64_t seed, CharId p0, CharId p1, bool skip_intro) {
     s = SimulationState{};
     s.tune = tune;
     s.rng.seed(seed, 0x6e6f656e67ULL); // "noeng"
@@ -103,9 +104,14 @@ void init_state(SimulationState& s, const CharacterData chars[2], const Tuning& 
     s.clock.ticks_per_beat = ticks_per_beat_for(tune.bpm);
     s.clock.beat_index = 0;
     s.match.round = 1;
-    s.fighters[0].character = CharId::Breaker;
-    s.fighters[1].character = CharId::Ballerina;
+    s.fighters[0].character = p0;
+    s.fighters[1].character = p1;
     reset_round(s, chars, skip_intro);
+}
+
+void init_state(SimulationState& s, const CharacterData chars[2], const Tuning& tune,
+                uint64_t seed, bool skip_intro) {
+    init_state(s, chars, tune, seed, CharId::Breaker, CharId::Ballerina, skip_intro);
 }
 
 static void check_round_over(SimulationState& s) {
@@ -154,9 +160,27 @@ void tick(SimulationState& s, const FrameInput& in, const CharacterData chars[2]
         s.clock.beat_index = (uint32_t)(s.tick / tpb) + 1;
         s.fighters[0].commit = Commit{};
         s.fighters[1].commit = Commit{};
+
+        // The window just opened: snapshot the settled positions. These anchor
+        // the coming beat's Neutral displacement and its clash range gate, so a
+        // fighter can begin sliding the instant its pose commits without
+        // shifting combat (the gate still reads where both stood right here).
+        s.duel.anchor_x[0] = s.fighters[0].pos_x;
+        s.duel.anchor_x[1] = s.fighters[1].pos_x;
+        s.duel.anchor_ready = true;
     }
 
     capture_commits(s, in);
+
+    // Start the Neutral slide the moment a pose commits, so body and sprite
+    // move together (design.md §2: the render draws the latest sim position).
+    // apply_neutral_movement is idempotent on the window-open anchors, so
+    // recomputing every tick from the lock until resolution is stable and the
+    // fighter still lands exactly on target at the next resolution boundary.
+    if (s.match.phase == Phase::Fighting && s.duel.macro == Macro::Neutral &&
+        (s.fighters[0].commit.locked || s.fighters[1].commit.locked)) {
+        apply_neutral_movement(s, chars);
+    }
 
     // The cosmetic Neutral hop turns around at the beat instant.
     if (phase == 0) {

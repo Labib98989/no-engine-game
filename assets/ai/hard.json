@@ -1,0 +1,10 @@
+{
+  "name": "HARD",
+  "solver_iters": 512,
+  "policy_noise_pct": 8,
+  "drop_pct": 0,
+  "aim_min_ticks": 0,
+  "aim_max_ticks": 4,
+  "v_advantage": 120,
+  "whiff_approach_bonus": 6
+}

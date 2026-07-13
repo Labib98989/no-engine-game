@@ -60,6 +60,16 @@ struct DuelState {
     uint8_t air_beats_elapsed = 0;
     Input last_hit_input = Input::None; // Stick the Landing needs the final hit
     int32_t last_hit_damage = 0;
+
+    // Settled positions captured when the capture window opens. The Neutral
+    // beat displacement is measured from these (not live positions), and the
+    // clash range gate reads the gap between them. This lets a fighter start
+    // sliding the instant its pose commits (design: movement reads with the
+    // sprite) without shifting the clash: combat still sees exactly where both
+    // fighters stood at window-open. anchor_ready is false until the first
+    // window opens (or a direct resolve captures it from live positions).
+    Fixed anchor_x[2];
+    bool anchor_ready = false;
 };
 
 // ---- resolution result (technical.md §3.5) ----------------------------------

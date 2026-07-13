@@ -1,0 +1,10 @@
+{
+  "name": "NORMAL",
+  "solver_iters": 256,
+  "policy_noise_pct": 25,
+  "drop_pct": 3,
+  "aim_min_ticks": 0,
+  "aim_max_ticks": 9,
+  "v_advantage": 120,
+  "whiff_approach_bonus": 6
+}

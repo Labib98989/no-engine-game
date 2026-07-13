@@ -16,5 +16,13 @@ void shutdown(Audio* a);
 // click / accent / hit / steal sounds. Call once per render frame.
 void update(Audio* a, const SimulationState& s);
 
+// Master volume, 0..1 (Options screen; applied to the whole engine).
+void set_volume(Audio* a, float v);
+
+// Menu blips (shell screens), reusing the synthesized pools.
+void ui_move(Audio* a);
+void ui_confirm(Audio* a);
+void ui_back(Audio* a);
+
 } // namespace audio
 } // namespace neg

@@ -11,14 +11,23 @@ namespace neg {
 namespace platform {
 
 struct UiCommands {
-    bool quit = false;
+    bool quit = false;           // window close
     bool toggle_overlay = false; // F1
     bool toggle_pause = false;   // F5
     bool step = false;           // F6
     bool resume = false;         // F7
     bool toggle_record = false;  // F9
     bool replay = false;         // F10
-    bool restart = false;        // Enter (MatchEnd rematch)
+    bool cycle_cpu = false;      // F8: P2 Human -> CPU Easy -> Normal -> Hard
+
+    // Menu navigation (shell screens). The same physical keys also produce
+    // FrameInput bits; the shell and the sim each read only their own side.
+    bool nav_up = false;    // W / Up
+    bool nav_down = false;  // S / Down
+    bool nav_left = false;  // A / Left
+    bool nav_right = false; // D / Right
+    bool confirm = false;   // Enter
+    bool back = false;      // Esc (pause menu in-match; back/quit in menus)
 };
 
 // Drains the SDL event queue; fills this frame's press edges and UI commands.

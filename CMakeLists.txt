@@ -44,6 +44,7 @@ add_library(neg_sim STATIC
     src/sim/combo.cpp
     src/sim/chardata.cpp
     src/sim/simulation.cpp
+    src/sim/ai.cpp
 )
 target_include_directories(neg_sim PUBLIC src)
 target_link_libraries(neg_sim PRIVATE neg_flags)
@@ -51,12 +52,15 @@ target_link_libraries(neg_sim PRIVATE neg_flags)
 # ---- neg: the game -------------------------------------------------------------
 add_executable(neg WIN32
     src/main.cpp
+    src/shell/shell.cpp
     src/platform/app.cpp
     src/platform/input.cpp
     src/render/font5x7.cpp
     src/render/draw.cpp
     src/render/sprites.cpp
+    src/render/effects.cpp
     src/data/loader.cpp
+    src/data/settings.cpp
     src/audio/audio.cpp
 )
 target_link_libraries(neg PRIVATE
@@ -79,6 +83,7 @@ add_executable(neg_tests
     tests/test_clash.cpp
     tests/test_combo.cpp
     tests/test_sim.cpp
+    tests/test_ai.cpp
 )
 target_include_directories(neg_tests PRIVATE third_party/doctest)
 target_link_libraries(neg_tests PRIVATE neg_flags neg_sim)
@@ -96,3 +101,5 @@ add_test(NAME headless_combo_cap
     COMMAND neg_headless ${CMAKE_SOURCE_DIR}/replays/script_combo_cap.txt --verify)
 add_test(NAME headless_steal
     COMMAND neg_headless ${CMAKE_SOURCE_DIR}/replays/script_steal.txt --verify)
+add_test(NAME headless_bot_vs_bot
+    COMMAND neg_headless --bot0 hard --bot1 easy --beats 300 --verify)
