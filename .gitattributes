@@ -1,0 +1,20 @@
+# Normalize line endings: store text as LF in the repo, check out native.
+# Keeps diffs clean across Windows/Linux and the CI runner.
+* text=auto
+
+# Explicitly treat source and data as text.
+*.c      text
+*.cpp    text
+*.h      text
+*.cmake  text
+*.json   text
+*.md     text
+*.txt    text
+*.yml    text
+
+# Binary assets — never touch line endings.
+*.png    binary
+*.dll    binary
+*.lib    binary
+*.pdb    binary
+*.exe    binary

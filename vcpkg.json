@@ -1,6 +1,7 @@
 {
   "name": "no-engine-game",
   "version-string": "0.1.0",
+  "builtin-baseline": "32305df7d0b9a308e6ac454dd98ebfe550342c09",
   "dependencies": [
     "sdl3",
     { "name": "sdl3-image", "features": ["png"] },

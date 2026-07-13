@@ -1,6 +1,31 @@
-build/
-out/
-.vs/
-*.user
-vcpkg_installed/
+# ---- Build output (regenerable — never commit) ------------------------------
+# CMake configures into build/ and vcpkg stages its dependency cache there.
+/build/
+/out/
 CMakeUserPresets.json
+
+# ---- Visual Studio / editor state -------------------------------------------
+.vs/
+.vscode/
+*.user
+*.suo
+*.VC.db
+*.VC.opendb
+
+# ---- Qoder / other generated repo wikis -------------------------------------
+.qoder/
+
+# ---- Runtime artifacts written next to the exe ------------------------------
+# The game writes these at runtime (SDL_GetBasePath); they are player state,
+# not source. Ignored anywhere so a stray copy never gets committed.
+settings.json
+session_ticks.txt
+
+# ---- Stray native build junk (safety net) -----------------------------------
+*.obj
+*.o
+*.exe
+*.pdb
+*.ilk
+*.lib
+*.exp
